@@ -1,0 +1,17 @@
+version: '3.3'
+services:
+  nurseryqueueapi:
+    build:
+      context: api
+    image: wakatimeparserapi/wakatimeparserapi
+    container_name: wakatimeparserapi
+    ports:
+      - "8080:8080"
+      - "8787:8787"
+      - "9990:9990"
+    command: /opt/jboss/wildfly/bin/standalone.sh -b 0.0.0.0 -bmanagement 0.0.0.0 --debug *:8787
+
+networks:
+  default:
+    external:
+      name: wakatimeparser

@@ -9,7 +9,7 @@
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
     <modules>
-        <module>WakaTimeParserApi</module>
+        <module>api</module>
     </modules>
 
     <properties>
@@ -20,6 +20,9 @@
         <failOnMissingWebXml>false</failOnMissingWebXml>
         <maven.javadoc.skip>true</maven.javadoc.skip>
         <junit.jupiter.version>5.3.2</junit.jupiter.version>
+        <jacoco.version>0.8.2</jacoco.version>
+        <jacoco.agent.jar>${settings.localRepository}/org/jacoco/org.jacoco.agent/${jacoco.version}/org.jacoco.agent-${jacoco.version}-runtime.jar</jacoco.agent.jar>
+        <surefire.argLine>-javaagent:${jacoco.agent.jar}=destfile=${project.build.directory}/jacoco-ut.exec</surefire.argLine>
     </properties>
 
     <dependencyManagement>
