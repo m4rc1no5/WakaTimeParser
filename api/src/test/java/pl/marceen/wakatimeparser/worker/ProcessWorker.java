@@ -12,6 +12,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
+import static pl.marceen.wakatimeparser.worker.FileWriter.write;
+
 /**
  * @author Marcin Zaremba
  */
@@ -35,6 +37,8 @@ class ProcessWorker {
                 .get();
 
         logger.info("Response: {}", response);
+
+        write("loginForm.html", response);
 
         // TODO: 2019-01-20 get csrftoken from login (GET)
         // TODO: 2019-01-20 login into panel (POST with form)

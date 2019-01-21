@@ -1,4 +1,4 @@
-package pl.marceen.wakatimeparser.service.entity;
+package pl.marceen.wakatimeparser.parser.entity;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
