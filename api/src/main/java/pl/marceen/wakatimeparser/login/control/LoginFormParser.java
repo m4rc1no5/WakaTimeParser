@@ -11,10 +11,10 @@ import java.util.Optional;
 /**
  * @author Marcin Zaremba
  */
-class LoginFormParser {
+public class LoginFormParser {
     private static final Logger logger = LoggerFactory.getLogger(LoginFormParser.class);
 
-    String findCsrfToken(String html) {
+    public String findCsrfToken(String html) {
         logger.info("Finding CSRF token");
 
         Document document = Jsoup.parse(html);
