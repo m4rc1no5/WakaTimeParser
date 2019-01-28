@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import pl.marceen.wakatimeparser.login.control.LoginFormParser;
 
 import javax.json.bind.JsonbBuilder;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -38,8 +40,12 @@ class ProcessWorker {
         AuthConfig config = convertJsonToAuthConfig(FileReader.read(getClass(), "config/auth.json"));
         logger.info("Config: {}", config);
 
+        CookieManager cm=new CookieManager();
+        cm.setCookiePolicy(CookiePolicy.ACCEPT_ORIGINAL_SERVER);
+
         HttpClient httpClient = HttpClient.newBuilder()
                 .followRedirects(HttpClient.Redirect.NORMAL)
+                .cookieHandler(cm)
                 .build();
 
         logger.info("Getting csrf token");
@@ -81,19 +87,9 @@ class ProcessWorker {
 
         return HttpRequest.newBuilder()
                 .uri(URI.create("https://wakatime.com/login"))
-//                .timeout(Duration.ofMinutes(1))
+                .timeout(Duration.ofMinutes(1))
                 .headers(
-//                        "Host", "wakatime.com",
-                        "User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0",
-                        "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                        "Accept-Language", "pl,en-US;q=0.7,en;q=0.3",
-                        "Accept-Encoding", "gzip, deflate, br",
-//                        "Referer", "https://wakatime.com/",
-                        "Content-Type", "application/x-www-form-urlencoded",
-                        "Upgrade-Insecure-Requests", "1",
-                        "Pragma", "no-cache",
-                        "Cache-Control", "no-cache",
-                        "TE", "Trailers"
+                        "Referer", "https://wakatime.com/"
                 )
                 .POST(HttpRequest.BodyPublishers.ofString(post))
                 .build();
