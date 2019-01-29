@@ -1,5 +1,9 @@
 package pl.marceen.wakatimeparser.worker;
 
+import okhttp3.HttpUrl;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -8,16 +12,7 @@ import org.slf4j.LoggerFactory;
 import pl.marceen.wakatimeparser.login.control.LoginFormParser;
 
 import javax.json.bind.JsonbBuilder;
-import java.net.CookieManager;
-import java.net.CookiePolicy;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
-
-import static java.net.URLEncoder.encode;
-import static java.nio.charset.StandardCharsets.UTF_8;
+import java.time.LocalDate;
 
 /**
  * @author Marcin Zaremba
@@ -34,64 +29,68 @@ class ProcessWorker {
 
     @Test
     @Disabled
-    void process() throws Exception {
-        logger.info("Process - START");
+    void work() throws Exception {
+        OkHttpClient client = OkHttpClientProducer.produce();
 
         AuthConfig config = convertJsonToAuthConfig(FileReader.read(getClass(), "config/auth.json"));
         logger.info("Config: {}", config);
 
-        CookieManager cm=new CookieManager();
-        cm.setCookiePolicy(CookiePolicy.ACCEPT_ORIGINAL_SERVER);
+        logger.info("Getting CSRF Token");
+        String csrfResponse = client.newCall(buildCsrfRequest()).execute().body().string();
+        String csrfToken = loginFormParser.findCsrfToken(csrfResponse);
 
-        HttpClient httpClient = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .cookieHandler(cm)
-                .build();
+        logger.info("Logging");
+        client.newCall(buildLoginRequest(csrfToken, config.getLogin(), config.getPassword())).execute();
 
-        logger.info("Getting csrf token");
-        String responseLoginForm = httpClient.sendAsync(buildRequestForLoginForm(), HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::body)
-                .get();
-
-//        logger.info("Response: {}", responseLoginForm);
-//        write("loginForm.html", responseLoginForm);
-
-        String csrfToken = loginFormParser.findCsrfToken(responseLoginForm);
-
-        String responseLogin = httpClient.sendAsync(
-                        buildRequestForLogin(csrfToken, config.getLogin(), config.getPassword()),
-                        HttpResponse.BodyHandlers.ofString()
-                )
-                .thenApply(HttpResponse::body)
-                .get();
-
-        logger.info("Response: {}", responseLogin);
-//        write("login.html", responseLogin);
+        logger.info("Getting summary");
+        String summaryResponse = client.newCall(buildSummaryRequest()).execute().body().string();
+        logger.info("Summary: {}", summaryResponse);
     }
 
     private AuthConfig convertJsonToAuthConfig(String json) {
         return JsonbBuilder.create().fromJson(json, AuthConfig.class);
     }
 
-    private HttpRequest buildRequestForLoginForm() {
-        return HttpRequest.newBuilder()
-                .uri(URI.create("https://wakatime.com/login"))
-                .timeout(Duration.ofMinutes(1))
+    private Request buildCsrfRequest() {
+        return new Request.Builder()
+                .url("https://wakatime.com/login")
+                .get()
                 .build();
     }
 
-    private HttpRequest buildRequestForLogin(String csrfToken, String login, String password) {
-        String post = String.format("csrftoken=%s&email=%s&password=%s", csrfToken, encode(login, UTF_8), encode(password, UTF_8));
+    private Request buildLoginRequest(String csrfToken, String email, String password) {
+        MultipartBody multipartBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("csrftoken", csrfToken)
+                .addFormDataPart("email", email)
+                .addFormDataPart("password", password)
+                .build();
 
-        logger.info("POST: {}", post);
+        return new Request.Builder()
+                .url("https://wakatime.com/login")
+                .post(multipartBody)
+                .header("referer", "https://wakatime.com/")
+                .build();
+    }
 
-        return HttpRequest.newBuilder()
-                .uri(URI.create("https://wakatime.com/login"))
-                .timeout(Duration.ofMinutes(1))
-                .headers(
-                        "Referer", "https://wakatime.com/"
-                )
-                .POST(HttpRequest.BodyPublishers.ofString(post))
+    private Request buildSummaryRequest() {
+        LocalDate now = LocalDate.now();
+
+        HttpUrl httpUrl = new HttpUrl.Builder()
+                .scheme("https")
+                .host("wakatime.com")
+                .addPathSegment("api")
+                .addPathSegment("v1")
+                .addPathSegment("users")
+                .addPathSegment("current")
+                .addPathSegment("summaries")
+                .addQueryParameter("start", now.minusDays(14).toString())
+                .addQueryParameter("end", now.toString())
+                .build();
+
+        return new Request.Builder()
+                .url(httpUrl.toString())
+                .get()
                 .build();
     }
 }
