@@ -1,24 +1,36 @@
 package pl.marceen.wakatimeparser.worker;
 
-import okhttp3.HttpUrl;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.marceen.wakatimeparser.login.control.LoginFormParser;
+import pl.marceen.wakatimeparser.parser.control.TimeMachine;
+import pl.marceen.wakatimeparser.parser.control.UrlBuilder;
 
 import javax.json.bind.JsonbBuilder;
-import java.time.LocalDate;
 
 /**
  * @author Marcin Zaremba
  */
+@ExtendWith(MockitoExtension.class)
 class ProcessWorker {
     private static final Logger logger = LoggerFactory.getLogger(ProcessWorker.class);
+
+    @Mock(answer = Answers.CALLS_REAL_METHODS)
+    private TimeMachine timeMachine;
+
+    @InjectMocks
+    private UrlBuilder urlBuilder;
 
     private LoginFormParser loginFormParser;
 
@@ -53,7 +65,7 @@ class ProcessWorker {
 
     private Request buildCsrfRequest() {
         return new Request.Builder()
-                .url("https://wakatime.com/login")
+                .url(urlBuilder.urlForLogin())
                 .get()
                 .build();
     }
@@ -67,29 +79,15 @@ class ProcessWorker {
                 .build();
 
         return new Request.Builder()
-                .url("https://wakatime.com/login")
+                .url(urlBuilder.urlForLogin())
                 .post(multipartBody)
-                .header("referer", "https://wakatime.com/")
+                .header("referer", urlBuilder.urlForReferer())
                 .build();
     }
 
     private Request buildSummaryRequest() {
-        LocalDate now = LocalDate.now();
-
-        HttpUrl httpUrl = new HttpUrl.Builder()
-                .scheme("https")
-                .host("wakatime.com")
-                .addPathSegment("api")
-                .addPathSegment("v1")
-                .addPathSegment("users")
-                .addPathSegment("current")
-                .addPathSegment("summaries")
-                .addQueryParameter("start", now.minusDays(14).toString())
-                .addQueryParameter("end", now.toString())
-                .build();
-
         return new Request.Builder()
-                .url(httpUrl.toString())
+                .url(urlBuilder.urlForSummary())
                 .get()
                 .build();
     }
