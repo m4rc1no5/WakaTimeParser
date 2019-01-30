@@ -5,6 +5,14 @@
 
 Parse your WakaTime free account and store data in own database
 
+Run test worker for login into WakaTime
+---------------------------------------
+
+To login into WakaTime and fetch data you must do two things:
+
+1. Create `auth.json` (in api\src\test\resources\config) in based on `auth.json.default` with your authentication data (login and password to WakaTime).
+2. Launch test `work()` in class `ProcessWorker`.
+
 Run application on Docker
 -------------------------
 
