@@ -22,7 +22,11 @@ public class ProcessTimer {
     public void process() {
         logger.info("Process START");
 
-        processFacade.process();
+        // TODO: 2019-02-11 login and password to database or standalone.xml
+        String login = "";
+        String password = "";
+
+        processFacade.process(login, password);
 
         logger.info("Process FINISH");
     }
