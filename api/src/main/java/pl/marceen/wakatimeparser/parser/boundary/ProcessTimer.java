@@ -2,6 +2,7 @@ package pl.marceen.wakatimeparser.parser.boundary;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.marceen.wakatimeparser.network.entity.NetworkException;
 import pl.marceen.wakatimeparser.parser.control.ProcessFacade;
 
 import javax.ejb.Schedule;
@@ -26,7 +27,11 @@ public class ProcessTimer {
         String login = "";
         String password = "";
 
-        processFacade.process(login, password);
+        try {
+            processFacade.process(login, password);
+        } catch (NetworkException e) {
+            e.printStackTrace();
+        }
 
         logger.info("Process FINISH");
     }

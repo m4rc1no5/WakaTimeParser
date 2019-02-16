@@ -1,6 +1,5 @@
 package pl.marceen.wakatimeparser.worker;
 
-import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +13,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.marceen.wakatimeparser.login.control.LoginFormParser;
+import pl.marceen.wakatimeparser.login.control.LoginProcessor;
+import pl.marceen.wakatimeparser.login.control.RequestBuilder;
+import pl.marceen.wakatimeparser.network.control.HttpClientProducer;
+import pl.marceen.wakatimeparser.network.control.HttpExcecutor;
 import pl.marceen.wakatimeparser.parser.control.TimeMachine;
 import pl.marceen.wakatimeparser.parser.control.UrlBuilder;
 
@@ -32,27 +35,33 @@ class ProcessWorker {
     @InjectMocks
     private UrlBuilder urlBuilder;
 
+    @Mock(answer = Answers.CALLS_REAL_METHODS)
+    private HttpExcecutor httpExcecutor;
+
+    @Mock(answer = Answers.CALLS_REAL_METHODS)
+    private RequestBuilder requestBuilder;
+
+    @Mock(answer = Answers.CALLS_REAL_METHODS)
     private LoginFormParser loginFormParser;
+
+    @InjectMocks
+    private LoginProcessor loginProcessor;
 
     @BeforeEach
     void setUp() {
-        loginFormParser = new LoginFormParser();
+        requestBuilder.setUrlBuilder(urlBuilder);
     }
 
     @Test
     @Disabled
     void work() throws Exception {
-        OkHttpClient client = OkHttpClientProducer.produce();
+        HttpClientProducer httpClientProducer = new HttpClientProducer();
+        OkHttpClient client = httpClientProducer.produce();
 
         AuthConfig config = convertJsonToAuthConfig(FileReader.read(getClass(), "config/auth.json"));
         logger.info("Config: {}", config);
 
-        logger.info("Getting CSRF Token");
-        String csrfResponse = client.newCall(buildCsrfRequest()).execute().body().string();
-        String csrfToken = loginFormParser.findCsrfToken(csrfResponse);
-
-        logger.info("Logging");
-        client.newCall(buildLoginRequest(csrfToken, config.getLogin(), config.getPassword())).execute();
+        loginProcessor.login(client, config.getLogin(), config.getPassword());
 
         logger.info("Getting summary");
         String summaryResponse = client.newCall(buildSummaryRequest()).execute().body().string();
@@ -61,28 +70,6 @@ class ProcessWorker {
 
     private AuthConfig convertJsonToAuthConfig(String json) {
         return JsonbBuilder.create().fromJson(json, AuthConfig.class);
-    }
-
-    private Request buildCsrfRequest() {
-        return new Request.Builder()
-                .url(urlBuilder.urlForLogin())
-                .get()
-                .build();
-    }
-
-    private Request buildLoginRequest(String csrfToken, String email, String password) {
-        MultipartBody multipartBody = new MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("csrftoken", csrfToken)
-                .addFormDataPart("email", email)
-                .addFormDataPart("password", password)
-                .build();
-
-        return new Request.Builder()
-                .url(urlBuilder.urlForLogin())
-                .post(multipartBody)
-                .header("referer", urlBuilder.urlForReferer())
-                .build();
     }
 
     private Request buildSummaryRequest() {

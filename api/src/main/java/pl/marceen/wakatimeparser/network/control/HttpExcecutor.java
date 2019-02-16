@@ -32,6 +32,16 @@ public class HttpExcecutor<T> {
         return result;
     }
 
+    public String execute(OkHttpClient client, Request request) throws NetworkException {
+        logger.info("START");
+
+        Response response = getResponse(client, request);
+        String responseAsString = getResponseAsString(response.body());
+        logger.debug("Raw response: {}", responseAsString);
+
+        return responseAsString;
+    }
+
     private T getResult(String response, Class<T> clazz) throws NetworkException {
         try (var jsonb = JsonbBuilder.create()) {
             return jsonb.fromJson(response, clazz);
